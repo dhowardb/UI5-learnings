@@ -1,0 +1,28 @@
+{
+  "generationParameters": {
+    "generationDate": "Tue Feb 10 2026 17:59:03 GMT+0000 (Coordinated Universal Time)",
+    "generatorPlatform": "SAP Business Application Studio",
+    "serviceType": "SAP System (ABAP On-Premise)",
+    "metadataFilename": "",
+    "serviceUrl": "http://ts3system:53033/sap/opu/odata4/sap/zui_dmo_requests_o4/srvd/sap/zui_dmo_requests_o4/0001/",
+    "appName": "rapdemojoule",
+    "appTitle": "RAP Demo",
+    "appDescription": "RAP Demo",
+    "appNamespace": "",
+    "ui5Theme": "sap_horizon",
+    "ui5Version": "1.144.1",
+    "enableEslint": false,
+    "enableTypeScript": false,
+    "showMockDataInfo": true,
+    "generatorVersion": "1.20.2",
+    "template": "List Report Page V4",
+    "generatorName": "SAP Fiori Application Generator",
+    "entityRelatedConfig": [
+      {
+        "type": "Main Entity",
+        "value": "Requests"
+      }
+    ],
+    "launchText": "To launch the generated application, run the following from the generated application root folder:\n\n```\n    npm start\n```"
+  }
+}
