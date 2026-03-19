@@ -21,7 +21,8 @@ sap.ui.define([
                 const model = view.getModel();
                 const path = '/Requests'
 
-                this._fieldsCache = await exportUtilities.resolveFieldDefs(view, this._fieldsCache, path);
+                const table = exportUtilities.getFioriElementsTable(view);
+                this._fieldsCache = await exportUtilities.resolveFieldDefs(view, this._fieldsCache, path, table);
 
                 const contexts = model.getBindings()
                     .filter(binding => binding.sPath.startsWith(path))

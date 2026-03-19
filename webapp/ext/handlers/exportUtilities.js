@@ -19,9 +19,65 @@ sap.ui.define([], function () {
     };
 
     return {
-        resolveFieldDefs: async function (view, fieldDefCache, path) {
-            if (fieldDefCache) return fieldDefCache;
+        getFioriElementsTable: function (view) {
+            // Fiori Elements wraps the table in an sap.ui.mdc.Table.
+            // Its inner table (sap.m.Table or sap.ui.table.Table) carries the binding.
+            // We search for the mdc.Table first, then fall back to m.Table.
+            const mdc = view.findAggregatedObjects(true, function (o) {
+                return o.isA("sap.ui.mdc.Table");
+            });
 
+            if (mdc.length) return mdc[0];
+
+            // Fallback: plain sap.m.Table (older FE versions)
+            const mTable = view.findAggregatedObjects(true, function (o) {
+                return o.isA("sap.m.Table");
+            });
+            return mTable.length ? mTable[0] : null;
+        },
+        getColumnOrder: function (table) {
+            try {
+                if (!table) return [];
+
+                // sap.ui.mdc.Table — preferred path for Fiori Elements
+                if (table.isA("sap.ui.mdc.Table")) {
+                    return table.getColumns()
+                        .filter(function (column) {
+                            // Exclude hidden columns — user didn't ask to see them
+                            return column.getVisible !== undefined
+                                ? column.getVisible()
+                                : true;
+                        })
+                        .map(function (column) {
+                            const data = column.getProperty('propertyKey')
+                            //or dataProperty for old ui versions
+                            return data;
+                        })
+                        .filter(Boolean);
+                }
+
+                // Fallback: sap.m.Table  (older FE versions)
+                if (table.isA("sap.m.Table")) {
+                    return table.getColumns()
+                        .filter(column => column.getVisible())
+                        .map(column => {
+                            // sap.m.Column doesn't have getDataProperty —
+                            // extract from column header text as last resort
+                            // but this is unreliable; MDC path is always preferred
+                            const oHeader = column.getHeader();
+                            return oHeader && oHeader.getText ? oHeader.getText() : null;
+                        })
+                        .filter(Boolean);
+                }
+
+            } catch (oErr) {
+                console.error("[ListReportExt] _getColumnOrder failed:", oErr);
+            }
+
+            return [];
+        },
+        resolveFieldDefs: async function (view, fieldDefCache, path, table) {
+            // if (fieldDefCache) return fieldDefCache;
             const metaModel = view.getModel().getMetaModel();
             const entityType = await metaModel.requestObject(path + "/");
 
@@ -29,8 +85,8 @@ sap.ui.define([], function () {
                 throw new Error("Could not read metadata for path: " + path);
             }
 
-            const fields = [];
-
+            let fields = [];
+            const metaMap = {}; //map fields with key
             for (const key of Object.keys(entityType)) {
                 if (key.startsWith("$") || key.startsWith("@")) continue;
 
@@ -62,10 +118,39 @@ sap.ui.define([], function () {
                     len: length,
                     numeric: defaults.numeric
                 });
+
+                metaMap[key] = { name: key, type: type, len: length, numeric: defaults.numeric };
             }
 
+            const columnsOrder = this.getColumnOrder(table);
+            if (columnsOrder.length > 0) {
+                // Reorder by visible column order.
+                const ordered = [];
+                const keys = {};
+
+                for (const columnKey of columnsOrder) {
+                    if (metaMap[columnKey]) {
+                        ordered.push(metaMap[columnKey]);
+                        keys[columnKey] = true;
+                    }
+                }
+
+                // Append remaining metadata fields not represented in table columns
+                // for (const key of Object.keys(metaMap)) {
+                //     if (!keys[key]) {
+                //         ordered.push(metamap[key]);
+                //     }
+                // }
+
+                fields = ordered;
+            } else {
+                // Fallback: no columns found — use metadata order as before
+                // just return fields
+                console.warn("[ListReportExt] Could not read column order. Falling back to metadata order.");
+            }
             console.log("[ListReportExt] Resolved field defs:", fields);
             return fields;
+
         },
         buildFixedLengthText: function (contexts, fieldDefs) {
             const lines = [];
